@@ -1,0 +1,81 @@
+using JuMP, Plots, Ipopt
+
+#parameters
+k10=2.0 * exp(7.0) #1/s
+k20=8.0* exp(14.0)
+E1=55000.0 #J/mol
+E2=110000.0
+R=8.314 #J/mol*K
+alfa=E2/E1
+
+nfe=20
+nx=2
+
+#initial points
+x0=Vector{Float64}(undef,2)
+x0= [1,0]
+
+u0=5.0
+
+# JuMP model
+m = Model(with_optimizer(Ipopt.Optimizer, warm_start_init_point = "yes", print_level = 5) )
+
+@variables(m, begin
+# states – dependent variables
+0<=x[1:nx , 1:nfe]<=1.0
+# input – independent variables
+0<=u[1:nfe]<=6
+#derivate
+dx[1:nx,1:nfe]
+end)
+
+#initial guess
+for i in 1:nfe
+for l in 1:nx
+	set_start_value(x[l,i], x0[l])
+end
+	set_start_value(u[i], u0)
+
+end
+
+@NLobjective(m, Min, -x[2,end])
+
+@NLconstraints(m, begin
+# system dynamics
+dx1dt[i= 1:nfe], dx[1,i] == -u[i]*x[1,i]
+dx2dt[i=1:nfe], dx[2,i] == u[i]*x[1,i]- k20*(u[i]^alfa)*x[2,i]/(k10^alfa)
+# set up operational constraints
+
+end)
+
+#−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−#
+# Solve the model
+solveNLP = JuMP.optimize!
+status = solveNLP(m)
+
+# Print cost
+Cost   = JuMP.objective_value(m)
+println("\n−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−")
+println("The maximum is ", Cost, "")
+println("−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−\n")
+
+println(JuMP.value.(x[1,:]))
+println(JuMP.value.(x[2,:]))
+println(JuMP.value.(u))
+
+# Get values for plotting
+x1_list   = JuMP.value.(x[1,:])
+x2_list   = JuMP.value.(x[2,:])
+u1_list   = JuMP.value.(u)
+u1first   = u1_list[1]
+
+# Add initial values to the lists (for plotting)
+x1_list   = pushfirst!(x1_list, 1)
+x2_list   = pushfirst!(x2_list, 0)
+u1_list   = pushfirst!(u1_list, NaN)
+
+
+# plot the optimal openloop solution of the MPC
+#p1 = plot(x1_list, label = "x1")
+#p2 = plot!(x2_list, label = "x2")
+p3 = plot(u1_list, label = "Input u")

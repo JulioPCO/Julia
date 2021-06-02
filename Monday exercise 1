@@ -1,0 +1,20 @@
+using Plots
+
+x= Vector{Float64}(undef, 40)
+y= Vector{Float64}(undef, 40)
+sol=Vector{Float64}(undef,40)
+for i in 1:40
+    if i>1
+        x[i]=x[i-1]+1
+        y[i]=y[i-1]+1
+    else
+        x[i]=0.1
+        y[i]=0.1
+    end
+end
+
+for i in 1:40
+    sol[i]=x[i]^2-4*x[i]+1.5*y[i]^2-7*y[i]+x[i]*y[i]+9-log(x[i])-log(y[i])
+end
+
+plot(sol, linewidth=5)

@@ -1,0 +1,25 @@
+# Declaring Packages
+using DifferentialEquations, Plots
+#ODE function: dx/dt = f(x,p,t)
+# coding the ODE
+tau=5.0
+function fODE(x,p,t)
+#x: are the differential states
+#p: the parameters/inputs
+#t: the time
+-x/tau
+end
+#ponto inicial
+x0=1.0
+# time span
+t = (0.0,10.0)
+#defining the problem - p is optional
+prob = ODEProblem(fODE,x0,t)
+#solving the problem
+sol = DifferentialEquations.solve(prob,Tsit5(), reltol=1e-8,abstol=1e-8)
+#extracting the solution
+xk = sol.u[end]
+
+plot(sol,linewidth=5,title="Solution to the linear ODE",
+     xaxis="Time (t)",yaxis="u(t)",label="solver solution")
+plot!(sol.t, t->exp(-t/tau),lw=3,ls=:dash,label="True Solution!")

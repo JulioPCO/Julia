@@ -1,0 +1,32 @@
+#declare the packages that we are using
+using JuMP, Ipopt, Plots
+
+#parameter
+theta=4.0
+
+# specify which solver we are using
+# declare the JuMP model
+m = Model(with_optimizer(Ipopt.Optimizer))
+# variables represent x1 and x2
+@variables(m, begin
+x[1:2]
+end)
+# "@" sign indicates MACRO, it is not exactly a function.
+# It is a code generator that helps the package
+# to be a lot faster
+# then, we add the contraints
+@NLconstraints(m, begin
+M1, sin(x[1]) - x[2]^2 ==0
+M2, x[1]^2 + x[2]^2 -theta <= 0
+M3, x[1]>=0
+end)
+# and we declare the NEW objective function
+@NLobjective(m, Min, (x[1]-4)^2 + (x[2]-4)^2)
+# now, we solve the model
+solveNLP = JuMP.optimize!
+status = solveNLP(m)
+#and print the results
+println("Solution:")
+println("x1: ", JuMP.value.(x[1]))
+println("x2: ", JuMP.value.(x[2]))
+println("OF value:", JuMP.objective_value(m))

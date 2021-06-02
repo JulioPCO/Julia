@@ -1,0 +1,91 @@
+using JuMP, DifferentialEquations,DiffEqSensitivity, Plots, Ipopt
+
+#parameters
+k10=2.0 * exp(7.0) #1/s
+k20=8.0* exp(14.0)
+E1=55000.0 #J/mol
+E2=110000.0
+R=8.314 #J/mol*K
+alfa=E2/E1
+
+# nx – number of states, nfe – number of intervals
+nfe=20
+nx=2
+h=1.0 #Time span
+u0=5.0
+
+#initial guess
+x0_1=1.0
+x0_2=0.0
+
+
+#Vectors
+x0=Vector{Float64}(undef, 2)
+x0=[x0_1,x0_2]
+
+
+#Function ODE
+function F(x0_1,x0_2,u,j)
+x0 = [x0_1,x0_2]
+
+function f(xdot,x,u,t)
+	xdot[1] =  -u*x[1]
+	xdot[2] = u*x[1]- k20*(u^alfa)*x[2]/(k10^alfa)
+	#objective function
+
+end
+
+tspan = (0.0,h) #integrating over the interval h
+
+prob = ODEProblem(f,x0,tspan,u)
+sol = DifferentialEquations.solve(prob,Vern9(),reltol=1e-8,abstol=1e-8,save_everystep=false)
+xk = sol.u[end]
+
+return xk[trunc(Int,j)]
+end
+
+
+# JuMP model
+m = Model(with_optimizer(Ipopt.Optimizer, warm_start_init_point = "yes", print_level = 5) )
+
+#registering user-defined function
+JuMP.register(m, :F, 4, F, autodiff=true)
+
+@variables(m, begin
+# states – dependent variables
+x[1:nx , 1:nfe]
+# input – independent variables
+ u[1:nfe]
+end)
+
+#initial guess
+for i in 1:nfe
+for l in 1:nx
+	set_start_value(x[l,i], x0[l])
+end
+if i <= nfe
+	set_start_value(u[i], u0)
+end
+end
+
+@NLobjective(m, Min, -x[2,end])
+
+@NLconstraints(m, begin
+# system dynamics
+eq[l=1:nx ,i=2:nfe ], x[l,i] - F(x[1,i - 1],x[2,i - 1],u[i - 1],l) == 0
+ eq0[l=1:nx ], x[l,1] - x0[l] == 0
+
+# set up operational constraints
+
+end)
+
+
+# Solve the model
+solveNLP = JuMP.optimize!
+status = solveNLP(m)
+
+# Print cost
+Cost   = JuMP.objective_value(m)
+println("\n−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−")
+println("The minimum is ", Cost, "")
+println("−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−\n")

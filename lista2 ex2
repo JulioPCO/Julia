@@ -1,0 +1,62 @@
+using JuMP, DifferentialEquations, Plots,Ipopt, DiffEqSensitivity
+
+# specify which solver we are using
+# declare the JuMP model
+m = Model(with_optimizer(Ipopt.Optimizer,warm_start_init_point = "yes") )
+
+
+
+h=0.5
+nfe=20
+nx=3
+u=zeros(1,20)
+
+
+function fODE1(dx, x,u,t)
+dx[1]=(1-x[2]^2)x[1]-x[2]+u;
+dx[2]=x[1]
+dx[3]=x[1]^2+x[2]^2+u
+end
+
+
+x0 = Vector{Float64}(undef,3)
+x0=[0.0,1.0,0.0]
+
+uvec=Matrix{Float64}(undef,1,nfe)
+
+
+mat = Matrix{Float64}(undef,nx,nfe) # states series for plotting
+
+
+for i in 1:nfe
+
+t=(h*(i-1),h*i)
+
+
+prob2=ODEProblem(fODE1,x0,t, u[i])
+sol = DifferentialEquations.solve(prob2,Tsit5(),reltol=1e-8,abstol=1e-8)
+xkk=sol.u[end]
+
+
+
+mat[:,i]=xkk
+
+uvec[1,i]=u[i]
+x0[:]=xkk
+
+end
+
+
+plot(mat[1,:],linewidth=5)
+
+plot!(mat[3,:], linewidth=6)
+plot!(mat[2,:], linewidth=3)
+
+println(mat[3,20])
+
+println(mat[1,:])
+println(mat[2,:])
+
+println(sum(mat[1,:].^2.0)+sum(mat[2,:].^2.0))
+
+m=Vector{Float64}(undef,20)

@@ -1,0 +1,107 @@
+using Plots
+
+#collocation points
+t=Vector{Float64}(undef,3)
+t=[0.1555051, 0.644949, 1.0]
+
+#Matrix M
+M1=Matrix{Float64}(undef,3,3)
+for i in 1:3
+    for j in 1:3
+        if j==1
+            M1[i,j]= t[i]
+        end
+
+        if j==2
+            M1[i,j]=(t[i]^2.0)/2.0
+        end
+
+        if j==3
+            M1[i,j]=(t[i]^3.0)/3.0
+        end
+    end
+end
+
+M2=Matrix{Float64}(undef,3,3)
+for i in 1:3
+    for j in 1:3
+        if j==1
+            M2[i,j]= 1
+        end
+
+        if j==2
+            M2[i,j]=t[i]
+        end
+
+        if j==3
+            M2[i,j]=(t[i]^2.0)
+        end
+    end
+end
+
+M2INV=inv(M2)
+
+M=Matrix{Float64}(undef, 3,3)
+M=M1*M2INV
+
+#other problem declarations
+Alfa=Matrix{Float64}(undef, 3,3)
+Alfa2=Matrix{Float64}(undef, 3,3)
+Ident=Matrix{Float64}(undef,3, 3)
+
+for i in 1:3
+    for j in 1:3
+        if i==j
+            Ident[i,j]=1.0
+        else
+            Ident[i,j]=0.0
+        end
+    end
+end
+
+Alfa= Ident+(2.0/5.0)*M
+Alfa2= Ident+(0.5/5.0)*M
+
+#X value for 5 points
+x= Matrix{Float64}(undef,6,3)
+x[1,:]=[1.0,1.0,1.0]
+
+for q in 1:5
+x0=Vector{Float64}(undef, 3)
+x0=[x[q,3],x[q,3],x[q,3]]
+x[q+1,:]=inv(Alfa)*x0
+end
+
+
+#X value for 20 points
+xm= Matrix{Float64}(undef,21,3)
+xm[1,:]=[1.0,1.0,1.0]
+
+for q in 1:20
+x0m=Vector{Float64}(undef, 3)
+x0m=[xm[q,3],xm[q,3],xm[q,3]]
+xm[q+1,:]=inv(Alfa2)*x0m
+end
+
+#time plot for 5 points
+ts = Vector{Float64}(undef,5) # time series for plotting
+for i in 1:5
+    ts[i] = 2.0*i
+end
+ts = pushfirst!(ts,0)
+
+
+#time plot for 20 points
+tsm = Vector{Float64}(undef,20) # time series for plotting
+for i in 1:20
+    tsm[i] = 0.5*i
+end
+tsm = pushfirst!(tsm,0)
+
+
+#Plotting
+p1 = plot(ts,x[:,3],linewidth=2, label="n=5")
+plot!( t->exp(-t/5.0),lw=2,ls=:dash,label="True Solution!")
+p2= plot(tsm,xm[:,3],linewidth=2, label="n=20")
+plot!( t->exp(-t/5.0),lw=2,ls=:dash,label="True Solution!")
+plot(p1,p2, layout = (2,1))
